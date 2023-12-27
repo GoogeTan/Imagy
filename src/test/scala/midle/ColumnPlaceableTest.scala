@@ -1,75 +1,89 @@
 package me.katze.imagy
 package midle
 
+import common.Nat
 
+import io.github.iltotore.iron.constraint.numeric.Greater
+import io.github.iltotore.iron.{ *, given }
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
+import cats.*
 
+import scala.util.Random
+/*
+import cats.data.*
+import cats.effect.std.*
+import cats.effect.syntax.all.{ *, given }*/
+import cats.effect.testing.scalatest.AsyncIOSpec
+import org.scalatest.freespec.AsyncFreeSpec
 
 class ColumnPlaceableTest extends AnyFlatSpec with should.Matchers:
-  private val defaultPlaceableSize = Rect(1, 5, 20, 31)
-  private val defaultRectictions = Rect(0, 0, 100, 100)
+  private val defaultPlaceableSize = Rect(20, 31)
+  private val defaultRestrictions = Rect(100, 100)
   case class Widget[+T]()
-
-  given PlacedContainer[Widget] = PlacedContainerImpl([E] => () => Widget(), [E] => (a : Widget[E], b : Widget[E]) => Widget())
   
-  private def constPlaceable(rect : Rect = defaultPlaceableSize, weight : Option[Int] = None) =
-    ConstPlaceable(rect, [E] => (* : E) => Widget(), weight)
+  def testColumnPlaceable[E](
+                              elements: List[Placeable[Widget[E]]],
+                              weight: Option[Int :| Greater[0]],
+                            ): ColumnPlaceable[Widget[E]] =
+    ColumnPlaceable(
+      elements,
+      weight,
+      (placeds, _) => Placed(Widget(), Rect(placeds.map(_.width).maxOption.getOrElse(0).refine, placeds.map(_.height).sum.refine))
+    )
+  private def constPlaceable(rect : Rect = defaultPlaceableSize, weight : Option[Int :| Greater[0]] = None) =
+    ConstPlaceable(rect, [E] => (_ : E) => Widget(), weight)
   
+  "Empty ColumnPlaceable" should "have zero size" in :
+    val c = testColumnPlaceable(Nil, None)
+    val result = c.placeInside(defaultRestrictions)
+    result.rect should be(Rect(0, 0))
   
-  "Empty ColumnPlaceable" should "have zero size" in:
-    val c = ColumnPlaceable[Widget, Nothing](Nil, None)
-    val result = c.placeInside(defaultRectictions)
-    result.rect should be(Rect(0, 0, 0, 0))
-  
-  "One element ColumnPlaceable" should "have the same size as element" in:
-    val c = ColumnPlaceable(List(constPlaceable()), None)
-    val result = c.placeInside(defaultRectictions)
+  "One element ColumnPlaceable" should "have the same size as element" in :
+    val c = testColumnPlaceable(List(constPlaceable()), None)
+    val result = c.placeInside(defaultRestrictions)
     result.rect should be(defaultPlaceableSize)
-  
+    
   "Two elements ColumnPlaceable" should "have the sum size" in :
-    val c = ColumnPlaceable(List(constPlaceable(), constPlaceable()), None)
-    val result = c.placeInside(defaultRectictions)
-    result.rect should be(defaultPlaceableSize.copy(height = defaultPlaceableSize.height * 2))
+    val c = testColumnPlaceable(List(constPlaceable(), constPlaceable()), None)
+    val result = c.placeInside(defaultRestrictions)
+    result.rect should be(defaultPlaceableSize.copy(height = (defaultPlaceableSize.height * 2).refine))
   
-  
-  "weightOf(Nil)" should "have zero weight" in:
+  "weightOf(Nil)" should "have zero weight" in :
     ColumnPlaceable.weightOf(Nil) should be(0)
   
-  "weightOf" should "have sum weight" in:
-    ColumnPlaceable.weightOf(
-      List(
-        constPlaceable(weight = Some(10)),
-        constPlaceable(weight = Some(21))
-      )
-    ) should be(31)
+  "fixedHeight" should "be the same as not weighted element size" in :
+    ColumnPlaceable.fixedHeight(constPlaceable(), defaultRestrictions) should be(defaultPlaceableSize.height)
+    
+  private val testSizes = (for
+    tryIndex <- 0 to 1000
+    random = Random(tryIndex)
+    count = random.nextInt(10_000)
+  yield count).toSet.toList.sorted
   
-  "weightOf" should "ignore static elements" in:
-    ColumnPlaceable.weightOf(
-      List(
-        constPlaceable(weight = Some(10)),
-        constPlaceable(),
-        constPlaceable(weight = Some(7))
-      )
-    ) should be(17)
+  for
+    count <- testSizes
+    random = Random(count ^ 2141)
+  do
+    val constElements = (0 until count).map(_ => constPlaceable()).toList
+    val weights = (0 until count).map(_ => (random.nextInt(100) + 1).refine[Greater[0]]).toList
+    val weightedElements = weights.map(weight => constPlaceable(weight = Some(weight)))
+    val mixedElements = random.shuffle(constElements ++ weightedElements)
     
-  "fixedHeight" should "ignore weighted elements" in:
-    ColumnPlaceable.fixedHeight(constPlaceable(weight = Some(1)), defaultRectictions) should be(0)
-  
-  
-  "fixedHeight" should "be the same as not weighted element size" in:
-    ColumnPlaceable.fixedHeight(constPlaceable(), defaultRectictions) should be(defaultPlaceableSize.height)
+    s"$count elements ColumnPlaceable" should s"have the ${defaultPlaceableSize.height * count} size" in:
+      val c = testColumnPlaceable(constElements, None)
+      val result = c.placeInside(defaultRestrictions)
+      result.rect should be(defaultPlaceableSize.copy(height = (defaultPlaceableSize.height * count).refine, width = if count == 0 then 0 else defaultPlaceableSize.width))
     
-  "fixedHeight(list)" should "have sum height" in:
-    ColumnPlaceable.fixedHeight(
-      List(
-        constPlaceable(weight = Some(10)),
-        constPlaceable(),
-        constPlaceable(weight = Some(7)),
-        constPlaceable(defaultPlaceableSize.copy(height = 17)),
-      ),
-      defaultRectictions
-    ) should be(17 + defaultPlaceableSize.height)
+    s"weightOf($count)" should s"have sum weight" in:
+      ColumnPlaceable.weightOf(weightedElements) should be(weights.sum)
     
+    s"weightOf($count)" should s"ignore static elements" in:
+      ColumnPlaceable.weightOf(mixedElements) should be(weights.sum)
     
+    s"fixedHeight($count)" should "have sum height" in:
+      ColumnPlaceable.fixedHeight(
+        mixedElements,
+        defaultRestrictions
+      ) should be(constElements.map(_.rect.height).sum)
 end ColumnPlaceableTest

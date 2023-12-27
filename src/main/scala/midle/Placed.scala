@@ -1,13 +1,10 @@
 package me.katze.imagy
 package midle
 
+import common.ZNat
+
 case class Placed[+T](value : T, rect : Rect):
-  def minX: Int = rect.x
-  def maxX: Int = rect.x + rect.width
-  def minY: Int = rect.y
-  def maxY: Int = rect.y + rect.height
+  def height: ZNat = rect.height
   
-  def height : Int = rect.height
-  
-  def width : Int = rect.width
+  def width: ZNat = rect.width
 end Placed

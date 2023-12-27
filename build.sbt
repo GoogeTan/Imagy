@@ -11,5 +11,5 @@ lazy val root = (project in file("."))
 libraryDependencies += "org.typelevel" %% "cats-effect" % "3.5.2"
 libraryDependencies += "io.github.iltotore" %% "iron" % "2.3.0"
 
-libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.17"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.17" % "test"
+libraryDependencies += "org.typelevel" %% "cats-effect-testing-scalatest" % "1.4.0" % Test
