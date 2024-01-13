@@ -1,5 +1,4 @@
-package me.katze.imagy
-package entrypoint
+package me.katze.imagy.desctop
 
 trait Desktop[F[_], Widget[+UpEvent, -DownEvent], -ApplicationEvent, +IOFinished]:
   /**
@@ -8,12 +7,7 @@ trait Desktop[F[_], Widget[+UpEvent, -DownEvent], -ApplicationEvent, +IOFinished
    * @param pushEvent отправляет внешнее событие корневому виджету.
    * @tparam DownEvent тип событий
    */
-  case class ApplicationControl[-DownEvent](
-                                              close : F[Unit],
-                                              pushEvent : DownEvent => F[Unit]
-                                            )
-  
-  case class WindowContext(screenWidth : Int, screenHeight : Int)
+  final case class ApplicationControl[-DownEvent](close : F[Unit], pushEvent : DownEvent => F[Unit])
   
   def WindowApplication[DownEvent](root : Widget[ApplicationEvent, DownEvent | IOFinished], fullScreen : Boolean) : F[ApplicationControl[DownEvent]]
 end Desktop

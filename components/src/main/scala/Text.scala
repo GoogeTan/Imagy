@@ -1,5 +1,5 @@
 package me.katze.imagy
-package high
+package components
 
 import cats.Monoid
 
@@ -17,7 +17,7 @@ trait Text[Widget[+_]]:
                   ) : Widget[T]
 end Text
 
-case class FontOptions(wight: Option[Int] = None, size: Option[Int] = None, font: Option[String] = None)
+final case class FontOptions(wight: Option[Int] = None, size: Option[Int] = None, font: Option[String] = None)
 
 given Monoid[FontOptions] =
   Monoid.instance(
