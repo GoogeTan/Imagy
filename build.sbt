@@ -15,10 +15,10 @@ lazy val component = (project in file("./components"))
     libraryDependencies := defaultLibraries
   ).dependsOn(common)
 
-lazy val desctop = (project in file("./desctop"))
+lazy val desktop = (project in file("./desktop"))
   .settings(
-    name := "desctop",
-    idePackagePrefix := Some("me.katze.imagy.desctop"),
+    name := "desktop",
+    idePackagePrefix := Some("me.katze.imagy.desktop"),
     libraryDependencies := defaultLibraries
   ).dependsOn(common)
 

@@ -3,11 +3,6 @@ package components
 
 import cats.data.State
 
-enum StatefulResponse[+F[+_], +ChildEvent, +ParentEvent]:
-  case ThrowEvent(parentEvent: ParentEvent)
-  case DoIO(task : F[ChildEvent])
-end StatefulResponse
-
 trait Stateful[F[+_], Widget[_]]:
   def stateful[
     S,

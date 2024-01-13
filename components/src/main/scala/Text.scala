@@ -16,12 +16,3 @@ trait Text[Widget[+_]]:
                     onChanged : String => T
                   ) : Widget[T]
 end Text
-
-final case class FontOptions(wight: Option[Int] = None, size: Option[Int] = None, font: Option[String] = None)
-
-given Monoid[FontOptions] =
-  Monoid.instance(
-    FontOptions(None, None, None),
-    (a : FontOptions, b : FontOptions) => FontOptions(b.wight.orElse(a.wight), b.size.orElse(a.size), b.font.orElse(a.font))
-  )
-end given

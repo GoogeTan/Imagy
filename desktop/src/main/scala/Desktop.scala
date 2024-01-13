@@ -1,4 +1,4 @@
-package me.katze.imagy.desctop
+package me.katze.imagy.desktop
 
 trait Desktop[F[_], Widget[+UpEvent, -DownEvent], -ApplicationEvent, +IOFinished]:
   /**
