@@ -1,5 +1,5 @@
-package me.katze.imagy
-package components
+package me.katze.imagy.components
+package stateful
 
 import cats.data.State
 

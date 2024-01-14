@@ -1,8 +1,4 @@
 package me.katze.imagy.layout
 
-import me.katze.imagy.common.ZNat
-
-final case class Placed[+T](value : T, rect : Rect):
-  def height: ZNat = rect.height
-  def width: ZNat = rect.width
-end Placed
+final case class Placed[T](value : T, x : Int, y : Int, width : Int, height : Int):
+  def this(sized : Sized[T], x : Int, y : Int) = this(sized.value, x, y, sized.width, sized.height)

@@ -35,6 +35,13 @@ final case class Constraints(minWidth: Int, maxWidth: Int, minHeight: Int, maxHe
    * This is true when at least one of maxWidth and maxHeight are 0.
    */
   val isZero: Boolean = maxWidth == 0 || maxHeight == 0
+  
+  def withMaxHeight(newMaxHeight : Int) : Constraints =
+    copy(
+      maxHeight = newMaxHeight,
+      minHeight = math.min(minHeight, newMaxHeight)
+    )
+  end withMaxHeight
 end Constraints
 
 object Constraints:

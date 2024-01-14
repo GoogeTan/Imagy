@@ -27,7 +27,7 @@ lazy val layout = (project in file("./layout"))
     name := "layout",
     idePackagePrefix := Some("me.katze.imagy.layout"),
     libraryDependencies := defaultLibraries
-  ).dependsOn(common)
+  ).dependsOn(common, component)
 
 lazy val common = (project in file("./common"))
   .settings(
