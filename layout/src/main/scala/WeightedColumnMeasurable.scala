@@ -1,135 +1,96 @@
 package me.katze.imagy.layout
 
-import cats.data.*
 import cats.syntax.all.{ *, given }
-import me.katze.imagy.common.{ Nat, ZNat }
+import io.github.iltotore.iron.constraint.all.{ GreaterEqual, Positive }
 import io.github.iltotore.iron.{ *, given }
+import me.katze.imagy.common.{ Nat, ZNat }
 import me.katze.imagy.components.layout.{ AdditionalAxisStrategy, MainAxisStrategy, MaybeWeighted }
 
-import scala.math.max
+final case class ColumnStrategy(verticalStrategy : MainAxisStrategy = MainAxisStrategy.Begin, horizontalStrategy : AdditionalAxisStrategy = AdditionalAxisStrategy.Center)
 
 final class WeightedColumnMeasurable[T](
-                                          children           : List[MaybeWeighted[Measurable[T]]],
-                                          layout             : Layout[T],
-                                          verticalStrategy   : MainAxisStrategy = MainAxisStrategy.Begin,
-                                          horizontalStrategy : AdditionalAxisStrategy = AdditionalAxisStrategy.Center,
+                                          val elements           : List[MaybeWeighted[Measurable[T]]],
+                                          val layout             : Layout[T],
+                                          val strategy : ColumnStrategy
                                         ) extends Measurable[T]:
-  private val fixedChildren: List[Measurable[T]] = children.flatMap:
-    case MaybeWeighted.Weighted(_, _) => Nil
-    case MaybeWeighted.Const(a) => List(a)
-  end fixedChildren
-  
-  override def placeInside(constrains: Constraints): Sized[T] =
-    layout(
-      placeAllTheChildren(
-        children,
-        heightFor(fixedChildren, constrains),
-        constrains
-      )
-    )
+  override def placeInside(constraints: Constraints): Sized[T] =
+    layout(placeAllTheElements(elements, constraints, strategy))
   end placeInside
 end WeightedColumnMeasurable
 
-def placeAllTheChildren[T](
+def placeAllTheElements[T](
                             children: List[MaybeWeighted[Measurable[T]]],
-                            fixedHeight: ZNat,
                             constraints: Constraints,
-                            verticalStrategy: MainAxisStrategy = MainAxisStrategy.Begin,
-                            horizontalStrategy: AdditionalAxisStrategy = AdditionalAxisStrategy.Center
+                            strategy : ColumnStrategy
                           ): List[Placed[T]] =
-  val allTheWeight: ZNat = allTheWeightFor(children)
-  assert(constraints.hasFixedHeight || allTheWeight == 0)
-  // Если мы сюда попали, то у нас либо есть ограничения, либо это значение никогда не будет использовано. Так что всё хорошо, даже если там Inf.
-  val freeHeight: ZNat = max(constraints.maxHeight - fixedHeight, 0).refine
-  val measured = measureChildren(children, freeHeight, allTheWeight, constraints)
-  val placed = placeChildren(measured, constraints, verticalStrategy, horizontalStrategy)
-  placed
-end placeAllTheChildren
+  val measured = measure(children, constraints)
+  place(measured, constraints, strategy)
+end placeAllTheElements
 
-def placeChildren[T](
-                      children: List[Sized[T]],
-                      constraints: Constraints,
-                      verticalStrategy: MainAxisStrategy = MainAxisStrategy.Begin,
-                      horizontalStrategy: AdditionalAxisStrategy = AdditionalAxisStrategy.Center,
-                    ): List[Placed[T]] =
-  placeHorizontally(children, constraints, horizontalStrategy)
-    .zip(placeVertically(children, constraints, verticalStrategy))
-    .map((x, y) =>
-      assert(x.value == y.value)
-      assert(x.width == y.width)
-      assert(x.height == y.height)
-      Placed(x.value, x.x, y.y, x.width, y.height)
-    )
-end placeChildren
-
-def placeVertically[T](
-                        children : List[Sized[T]],
-                        constraints: Constraints,
-                        verticalStrategy   : MainAxisStrategy = MainAxisStrategy.Begin,
-                      ) : List[Placed[T]] =
-  ???
-end placeVertically
-
-def placeHorizontally[T](
-                        children: List[Sized[T]],
-                        constraints: Constraints,
-                        horizontalStrategy: AdditionalAxisStrategy = AdditionalAxisStrategy.Begin,
-                      ): List[Placed[T]] =
-  ???
-end placeHorizontally
-
-def measureChildren[T](children: List[MaybeWeighted[Measurable[T]]], freeHeight : ZNat, allTheWeight : ZNat, constraints: Constraints): List[Sized[T]] =
-  children
-    .traverse(measureChildS(_, freeHeight, allTheWeight))
-    .runA(constraints)
-    .value
-end measureChildren
-
-/**
- * TODO Написать документацию. По типу не понятно, что тут происходит.
- * @return
- */
-def measureChildS[T](child: MaybeWeighted[Measurable[T]], freeHeight: ZNat, allTheWeight: ZNat): State[Constraints, Sized[T]] =
-  State:
-    (constrains: Constraints) =>
-      val result = measureChild(child, constrains, freeHeight, allTheWeight)
-      (recalculateConstraints(result, constrains), result)
-end measureChildS
-
-def recalculateConstraints[T](placed : Sized[T], constraints: Constraints) : Constraints = ???
-
-def measureChild[T](child : MaybeWeighted[Measurable[T]], constraints: Constraints, freeHeight: ZNat, allTheWeight: ZNat) : Sized[T] =
-  child match
-    case MaybeWeighted.Weighted(measurable, weight) =>
-      assert(allTheWeight != 0, "Sum weight must be greater then 0 when any weighted exists")
-      val height = calculateWeightedHeight(freeHeight, allTheWeight.refine, weight)
-      val result = measurable.placeInside(constraints.withMaxHeight(height))
-      result
-    case MaybeWeighted.Const(measurable) =>
-      measurable.placeInside(constraints)
+def measure[T](children : List[MaybeWeighted[Measurable[T]]], constraints: Constraints) : List[Sized[T]] =
+  weightValueFor(children, constraints) match
+    case Left(weightContext) =>
+      measureWithContext(children, weightContext, constraints)
+    case Right(nonWeightedChildren) =>
+      assert(nonWeightedChildren.size == children.size, "Weight calculation must never affect children count. In case it happened, please, create an issue.")
+      nonWeightedChildren.map(_.placeInside(constraints))
   end match
-end measureChild
+end measure
 
-def calculateWeightedHeight(freeHeight: ZNat, allTheWeight: Nat, weight: Nat) : ZNat =
-  if freeHeight == Constraints.Infinity then
-    Constraints.Infinity
-  else if freeHeight > Int.MaxValue / weight then // На случай переполнения. Вряд ли достижимо, но лишним не будет.
-    (freeHeight / allTheWeight * weight).refine
-  else
-    (weight * freeHeight / allTheWeight).refine
-  end if
-end calculateWeightedHeight
-
-def allTheWeightFor[T](children : List[MaybeWeighted[T]]) : ZNat =
+def measureWithContext[T](children : List[MaybeWeighted[Measurable[T]]], context: WeightValue, constraints: Constraints) : List[Sized[T]] =
   children.map {
-    case MaybeWeighted.Weighted(_, weight) => weight
-    case _ => 0
-  }.sum.refine
+    case MaybeWeighted(value, None) =>
+      value.placeInside(constraints)
+    case MaybeWeighted(value, Some(weight)) =>
+      value.placeInside(constrainsWithWeight(weight, context, constraints))
+  }
+end measureWithContext
+
+def constrainsWithWeight(weight : Nat, context: WeightValue, constraints: Constraints) : Constraints =
+  constraints.withMaxHeight(context.weightsSpace(weight))
+end constrainsWithWeight
+
+// Отображает то, сколько места занимает каждая единица веса. TODO придумать название получше на английском.
+final case class WeightValue(allTheWeight : Nat, freeSpace : ZNat):
+  def weightsSpace(weight : Nat) : ZNat =
+    /*
+     * if - защита от переполнения.
+     * Мы уверены в refine, так как произведение и частное неотрицательных всегда не отрицательно.
+     */
+    if Int.MaxValue / weight >= freeSpace || Int.MaxValue / freeSpace >= weight then
+      (weight / allTheWeight * freeSpace).refine
+    else
+      (weight * freeSpace / allTheWeight).refine
+    end if
+  end weightsSpace
+end WeightValue
+
+def weightValueFor[T](children : List[MaybeWeighted[Measurable[T]]], constraints: Constraints) : Either[WeightValue, List[Measurable[T]]] =
+  allTheWeightFor(children, constraints).toLeft(children.map(_.value))
+end weightValueFor
+
+def allTheWeightFor[T](children : List[MaybeWeighted[Measurable[T]]], constraints: Constraints) : Option[WeightValue] =
+    children
+      .mapFilter(_.weight)
+      .sum
+      .refineOption[Positive]
+      .map(allTheWeight =>
+        assert(constraints.hasBoundedHeight, "Container with weighted children must have fixed size.")
+        val freeHeight : Option[ZNat] = (constraints.maxHeight - fixedHeight(children, constraints)).refineOption
+        // Если фиксированные элементы занимают больше дозволенного, то для весовых места нет, поэтому 0.
+        // Это допущение необходимо, чтобы не получить отрицательное количество пустого места.
+        WeightValue(allTheWeight, freeHeight.getOrElse(0))
+      )
 end allTheWeightFor
 
-def heightFor[T](children : List[Measurable[T]], constraints: Constraints) : ZNat =
-  children
-    .map(_.placeInside(constraints))
-    .foldLeft(0)(_ + _.height)
-    .refine
-end heightFor
+def fixedHeight[T](children : List[MaybeWeighted[Measurable[T]]], constraints: Constraints) : ZNat =
+  children.map {
+    case MaybeWeighted(value, None) =>
+      value.placeInside(constraints).height
+    case _ => 0
+  }.sum.refine // Тут мы уверены, что значение >= 0, так как это сумма ZNat. Просто это нельзя по человечески выразить в типе.
+end fixedHeight
+
+def place[T](sized : List[Sized[T]], constraints: Constraints, strategy: ColumnStrategy) : List[Placed[T]] =
+  ???
+end place

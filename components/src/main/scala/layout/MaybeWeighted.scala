@@ -3,7 +3,4 @@ package layout
 
 import me.katze.imagy.common.Nat
 
-enum MaybeWeighted[+T]:
-  case Weighted(value: T, weight: Nat)
-  case Const(value: T)
-end MaybeWeighted
+final case class MaybeWeighted[+T](value : T, weight : Option[Nat])
