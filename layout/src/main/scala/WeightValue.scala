@@ -21,29 +21,29 @@ final case class WeightValue(allTheWeight: Nat, freeSpace: ZNat):
   end spaceForWeight
 end WeightValue
 
-def weightValueFor[T](elements : List[MaybeWeighted[Measurable[T]]], constraints: Constraints, axis: Axis) : Either[WeightValue, List[Measurable[T]]] =
-  allTheWeightFor(elements, constraints, axis).toLeft(elements.map(_.value))
+def weightValueFor[T](elements : List[MaybeWeighted[Measurable[T]]], constraints: AxisDependentConstraints, axis: Axis) : Either[WeightValue, List[Measurable[T]]] =
+  allTheWeightFor(elements, constraints).toLeft(elements.map(_.value))
 end weightValueFor
 
 // TODO Отрефакторить это чудо. Читается очень не очень.
-def allTheWeightFor[T](children : List[MaybeWeighted[Measurable[T]]], constraints: Constraints, axis: Axis) : Option[WeightValue] =
+def allTheWeightFor[T](children : List[MaybeWeighted[Measurable[T]]], constraints: AxisDependentConstraints) : Option[WeightValue] =
   children
     .mapFilter(_.weight)
     .sum
     .refineOption[Positive]
     .map(allTheWeight =>
-      assert(constraints.isAxisBounded(axis), s"Container with weighted children must have fixed size for axis $axis.")
-      val freeHeight : Option[ZNat] = (constraints.maxValue(axis) - fixedSpace(children, constraints, axis)).refineOption
+      assert(constraints.isMainAxisBounded, s"Container with weighted children must have fixed size for axis ${constraints.axis}.")
+      val freeHeight : Option[ZNat] = (constraints.mainAxisMaxValue - fixedSpace(children, constraints)).refineOption
       // Если фиксированные элементы занимают больше дозволенного, то для весовых места нет, поэтому 0.
       // Это допущение необходимо, чтобы не получить отрицательное количество пустого места.
       WeightValue(allTheWeight, freeHeight.getOrElse(0))
     )
 end allTheWeightFor
 
-def fixedSpace[T](children : List[MaybeWeighted[Measurable[T]]], constraints: Constraints, axis: Axis) : ZNat =
+def fixedSpace[T](children : List[MaybeWeighted[Measurable[T]]], constraints: AxisDependentConstraints) : ZNat =
   children.map {
     case MaybeWeighted(value, None) =>
-      value.placeInside(constraints).mainAxisValue(axis)
+      value.placeInside(constraints.constraints).mainAxisValue(constraints.axis)
     case _ => 0
   }.sum.refine // Тут мы уверены, что значение >= 0, так как это сумма ZNat. Просто это нельзя по человечески выразить в типе.
 end fixedSpace
