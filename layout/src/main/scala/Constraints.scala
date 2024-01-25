@@ -36,6 +36,20 @@ final case class Constraints(minWidth: Int, maxWidth: Int, minHeight: Int, maxHe
    */
   val isZero: Boolean = maxWidth == 0 || maxHeight == 0
   
+  def isAxisBounded(axis: Axis) : Boolean =
+    axis match
+      case Axis.Vertical => hasBoundedHeight
+      case Axis.Horizontal => hasBoundedWidth
+    end match
+  end isAxisBounded
+  
+  def maxValue(axis: Axis) : Int =
+    axis match
+      case Axis.Vertical => maxHeight
+      case Axis.Horizontal => maxWidth
+    end match
+  end maxValue
+  
   def withMaxHeight(newMaxHeight : Int) : Constraints =
     copy(
       maxHeight = newMaxHeight,
