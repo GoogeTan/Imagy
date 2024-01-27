@@ -11,8 +11,9 @@ def WeightedAxisBasedContainerMeasurable[T](
                                               axis: Axis
                                             ) : Measurable[T] =
   constraints =>
-    val measured = measure(elements, AxisDependentConstraints(constraints, axis), axis)
-    val placed = place(measured, constraints, strategy, axis)
+    val dependentAxes = AxisDependentConstraints.fromConstraints(constraints, axis)
+    val measured = measure(elements, dependentAxes, axis)
+    val placed = place(measured, dependentAxes, strategy, axis)
     layout(placed)
 end WeightedAxisBasedContainerMeasurable
 
@@ -24,6 +25,7 @@ def AxisBasedContainerMeasurable[T](
                                     ) : Measurable[T] =
   constraints =>
     val measured = measureWithoutWeight(elements, constraints)
-    val placed = place(measured, constraints, strategy, axis)
+    val dependentAxes = AxisDependentConstraints.fromConstraints(constraints, axis)
+    val placed = place(measured, dependentAxes, strategy, axis)
     layout(placed)
 end AxisBasedContainerMeasurable

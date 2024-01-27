@@ -1,52 +1,41 @@
 package me.katze.imagy.layout
 
-import Constraints.Infinity
-
-/**
- *
- * @param minWidth The minimum width that the measurement can take, in pixels.
- * @param maxWidth The maximum width that the measurement can take, in pixels. This will either be a positive value greater than or equal to [minWidth] or [Constraints.Infinity].
- * @param minHeight The minimum height that the measurement can take, in pixels.
- * @param maxHeight The maximum height that the measurement can take, in pixels. This will either be a positive value greater than or equal to [minHeight] or [Constraints.Infinity].
- */
-final case class Constraints(minWidth: Int, maxWidth: Int, minHeight: Int, maxHeight: Int):
+final case class Constraints(horizontal : AxisConstraints, vertical : AxisConstraints):
   /**
    * `false` when [maxWidth] is [Infinity] and `true` if [maxWidth] is a non-[Infinity] value.
    */
-  val hasBoundedWidth: Boolean = maxWidth != Infinity
+  val hasBoundedWidth: Boolean = horizontal.bounded
   
   /**
    * `false` when [maxHeight] is [Infinity] and `true` if [maxHeight] is a non-[Infinity] value.
    */
-  val hasBoundedHeight: Boolean = maxHeight != Infinity
+  val hasBoundedHeight: Boolean = vertical.bounded
   
   /**
    * Whether there is exactly one width value that satisfies the constraints.
    */
-  val hasFixedWidth: Boolean = maxWidth == minWidth
+  val hasFixedWidth: Boolean = horizontal.fixed
   
   /**
    * Whether there is exactly one height value that satisfies the constraints.
    */
-  val hasFixedHeight: Boolean = maxHeight == minHeight
+  val hasFixedHeight: Boolean = vertical.fixed
   
   /**
    * Whether the area of a component respecting these constraints will definitely be 0.
    * This is true when at least one of maxWidth and maxHeight are 0.
    */
-  val isZero: Boolean = maxWidth == 0 || maxHeight == 0
+  val isZero: Boolean = vertical.zero || horizontal.zero
   
   def withMaxHeight(newMaxHeight : Int) : Constraints =
     copy(
-      maxHeight = newMaxHeight,
-      minHeight = math.min(minHeight, newMaxHeight)
+      vertical = vertical.copy(max = newMaxHeight, min = math.min(vertical.min, newMaxHeight))
     )
   end withMaxHeight
   
   def withMaxWidth(newMaxWeight : Int) : Constraints =
     copy(
-      maxWidth = newMaxWeight,
-      minWidth = math.min(minHeight, newMaxWeight)
+      horizontal = horizontal.copy(max = newMaxWeight, min = math.min(horizontal.min, newMaxWeight))
     )
   end withMaxWidth
 end Constraints
