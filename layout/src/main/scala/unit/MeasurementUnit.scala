@@ -9,6 +9,11 @@ enum MeasurementUnit extends Ordered[MeasurementUnit]:
   case Infinite
   case Value(value : ZNat)
   
+  def valueOption : Option[ZNat] = this match
+    case MeasurementUnit.Infinite => None
+    case MeasurementUnit.Value(value) => Some(value)
+  end valueOption
+  
   override def compare(that: MeasurementUnit): Int =
     (this, that) match
       case (Infinite, Infinite) => 0
@@ -35,4 +40,9 @@ enum MeasurementUnit extends Ordered[MeasurementUnit]:
       case MeasurementUnit.Value(value) => (value - that).refineOption[GreaterEqual[0]].map(MeasurementUnit.Value.apply)
     end match
   end -
+  
+  override def toString: String = this match
+    case MeasurementUnit.Infinite => "Inf"
+    case MeasurementUnit.Value(value) => s"${value}mu"
+  end toString
 end MeasurementUnit

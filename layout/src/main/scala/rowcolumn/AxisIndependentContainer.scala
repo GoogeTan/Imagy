@@ -1,4 +1,5 @@
 package me.katze.imagy.layout
+package rowcolumn
 
 import bound.AxisDependentBounds
 import bound.constraints.{ MainAxisConstraint, given }
@@ -6,11 +7,11 @@ import bound.constraints.{ MainAxisConstraint, given }
 import io.github.iltotore.iron.constraint.all.{ *, given }
 import io.github.iltotore.iron.constraint.collection.{ *, given }
 import io.github.iltotore.iron.{ *, given }
-import me.katze.imagy.layout.constraint.Weighted
 import unit.constraints.Finite
 
 import me.katze.imagy.components.layout.MaybeWeighted
-import me.katze.imagy.components.layout.strategy.AdditionalAxisStrategy
+import me.katze.imagy.components.layout.strategy.{ AdditionalAxisStrategy, Begin }
+import me.katze.imagy.layout.constraint.Weighted
 
 def column[T](
                 elements : List[MaybeWeighted[Measurable[T]]] :| Exists[Weighted],
@@ -29,6 +30,6 @@ def WeightedAxisBasedContainerMeasurable[T](
   constraints =>
     val dependentAxes: AxisDependentBounds :| MainAxisConstraint[Finite] = AxisDependentBounds.fromConstraints(constraints, mainAxis).refine
     val measured = measure(elements, dependentAxes)
-    val placed = place(measured, additionalAxisStrategy, dependentAxes)
+    val placed = rowColumnPlace(measured, Begin, additionalAxisStrategy, dependentAxes)
     layout(placed)
 end WeightedAxisBasedContainerMeasurable

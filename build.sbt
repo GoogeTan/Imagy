@@ -41,4 +41,5 @@ def defaultLibraries = Seq(
   "io.github.iltotore" %% "iron" % "2.4.0",
   "org.typelevel" %% "cats-effect-testing-scalatest" % "1.4.0" % Test,
   "org.typelevel" %% "cats-effect" % "3.5.2" % Test,
+  "org.scalatest" %% "scalatest" % "3.2.17" % Test
 )
