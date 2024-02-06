@@ -1,7 +1,6 @@
 package me.katze.imagy.layout
 package bound
 
-import bound.constraints.given
 import unit.MeasurementUnit
 import unit.constraints.{ Finite, Infinite }
 
@@ -17,8 +16,4 @@ final case class AxisBounds(min: MeasurementUnit, max: MeasurementUnit):
   def withMaxValue(value : MeasurementUnit) : AxisBounds =
     AxisBounds(Ordering[MeasurementUnit].min(this.min, value), value)
   end withMaxValue
-  
-  def refined : Either[AxisBounds :| Finite, AxisBounds :| Infinite] =
-    Either.cond(this.finite, this.refine, this.refine)
-  end refined
 end AxisBounds

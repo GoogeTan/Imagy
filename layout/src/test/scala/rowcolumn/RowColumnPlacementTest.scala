@@ -28,13 +28,14 @@ class RowColumnPlacementTest extends AnyFlatSpec with should.Matchers:
   )
   val finiteBounds: Bounds = Bounds(
     AxisBounds(MeasurementUnit.Value(0), MeasurementUnit.Value(30)),
-    AxisBounds(MeasurementUnit.Value(0), MeasurementUnit.Value(30))
+    AxisBounds(MeasurementUnit.Value(0), MeasurementUnit.Value(60))
   )
   
   
   val finiteOverboundsVertical: AxisDependentBounds = AxisDependentBounds.fromConstraints(finiteOverbounds, Axis.Vertical)
   val finiteOverboundsHorizontal: AxisDependentBounds = AxisDependentBounds.fromConstraints(finiteOverbounds, Axis.Horizontal)
   val finiteBoundsHorizontal: AxisDependentBounds = AxisDependentBounds.fromConstraints(finiteBounds, Axis.Horizontal)
+  val finiteBoundsVertical: AxisDependentBounds = AxisDependentBounds.fromConstraints(finiteBounds, Axis.Vertical)
   
   "Row((10, 20), (10, 20), (10, 20))" should s"be (0, 0) (${tenSized.width}, 0) (${tenSized.width * 2}, 0) in $infiniteBoundsHorizontal" in:
     rowColumnPlace(List(tenSized, tenSized, tenSized), Begin, Begin, infiniteBoundsHorizontal) should be(List(
@@ -65,7 +66,15 @@ class RowColumnPlacementTest extends AnyFlatSpec with should.Matchers:
     ))
     
   "RowColumn in matching bounds" should "not depend on main axis strategy" in:
-    Set(Begin, Center, End, SpaceBetween).map(strategy =>
-      rowColumnPlace(List(tenSized, tenSized, tenSized), strategy, Begin, finiteBoundsHorizontal)
-    ) should have size (1)
+    val elements = List(tenSized, tenSized, tenSized)
+    val strategies = Set(Begin, Center, End, SpaceBetween)
+    
+    strategies.map(strategy => rowColumnPlace(elements, strategy, Begin, finiteBoundsHorizontal)) should have size (1)
+    strategies.map(strategy => rowColumnPlace(elements, strategy, Begin, finiteBoundsVertical)) should have size (1)
+  
+  "RowColumn in infinite bounds with End strategy" should "throw IllegalStateException exception" in :
+    val elements = List(tenSized, tenSized, tenSized)
+    assertThrows[IllegalArgumentException](rowColumnPlace(elements, End, Begin, infiniteBoundsHorizontal))
+  
+  
 end RowColumnPlacementTest

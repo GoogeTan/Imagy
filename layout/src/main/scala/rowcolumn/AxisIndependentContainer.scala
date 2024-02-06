@@ -13,23 +13,21 @@ import me.katze.imagy.components.layout.MaybeWeighted
 import me.katze.imagy.components.layout.strategy.{ AdditionalAxisStrategy, Begin }
 import me.katze.imagy.layout.constraint.Weighted
 
-def column[T](
-                elements : List[MaybeWeighted[Measurable[T]]] :| Exists[Weighted],
-                horizontalStrategy : AdditionalAxisStrategy,
-                layout: Layout[T]
-              ) : Measurable[T] =
-  WeightedAxisBasedContainerMeasurable(Axis.Vertical, layout, horizontalStrategy, elements)
+def column[T : Layout](
+                        elements : List[MaybeWeighted[Measurable[T]]] :| Exists[Weighted],
+                        horizontalStrategy : AdditionalAxisStrategy
+                      ) : Measurable[T] =
+  WeightedAxisBasedContainerMeasurable(Axis.Vertical, horizontalStrategy, elements)
 end column
 
-def WeightedAxisBasedContainerMeasurable[T](
-                                              mainAxis: Axis,
-                                              layout   : Layout[T],
-                                              additionalAxisStrategy: AdditionalAxisStrategy,
-                                              elements : List[MaybeWeighted[Measurable[T]]] :| Exists[Weighted],
-                                            ) : Measurable[T] =
+def WeightedAxisBasedContainerMeasurable[T : Layout](
+                                                      mainAxis: Axis,
+                                                      additionalAxisStrategy: AdditionalAxisStrategy,
+                                                      elements : List[MaybeWeighted[Measurable[T]]] :| Exists[Weighted],
+                                                    ) : Measurable[T] =
   constraints =>
     val dependentAxes: AxisDependentBounds :| MainAxisConstraint[Finite] = AxisDependentBounds.fromConstraints(constraints, mainAxis).refine
     val measured = measure(elements, dependentAxes)
     val placed = rowColumnPlace(measured, Begin, additionalAxisStrategy, dependentAxes)
-    layout(placed)
+    summon[Layout[T]](placed)
 end WeightedAxisBasedContainerMeasurable

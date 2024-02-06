@@ -19,8 +19,10 @@ def rowColumnPlace[T](
                         additionalAxisStrategy: AdditionalAxisStrategy,
                         bounds: AxisDependentBounds
                       ) : List[Placed[T]] =
+  val allTheSum: ZNat = elements.map(_.mainAxisValue(bounds.axis)).sum.refine
+  val size: ZNat = elements.size.refine
   elements
-    .traverse(placeOne(_, mainAxisStrategy, additionalAxisStrategy, bounds, elements.map(_.mainAxisValue(bounds.axis)).sum, elements.size))
+    .traverse(placeOne(_, mainAxisStrategy, additionalAxisStrategy, bounds, allTheSum, size))
     .runA(RowColumnPlacementState(0))
     .value
 end rowColumnPlace
@@ -32,36 +34,37 @@ def placeOne[T](
                   mainAxisStrategy: MainAxisStrategy,
                   additionalAxisStrategy: AdditionalAxisStrategy,
                   bounds: AxisDependentBounds,
-                  allTheSize : Int,
-                  count : Int
+                  allTheSize : ZNat,
+                  count : ZNat
                 ) : State[RowColumnPlacementState, Placed[T]] =
   for
     state                   <- State.get[RowColumnPlacementState]
-    mainAxisCoordinate       = placeMainAxis(element, mainAxisStrategy, state, bounds, allTheSize)
+    mainAxisCoordinate       = placeMainAxis(mainAxisStrategy, state, bounds, allTheSize)
     additionalAxisCoordinate = placeAdditionalAxis(element, additionalAxisStrategy, bounds)
     result                   = placed(element, mainAxisCoordinate, additionalAxisCoordinate, bounds.axis)
-    _                       <- updateStateAccordingResult(result, bounds.axis, (bounds.mainAxisMaxValue.get - allTheSize) / count)
+    spaceBetween             = bounds.mainAxisMaxValue.map(_ - allTheSize).map(_ / count)
+    _                       <- updateStateAccordingResult(result, bounds.axis, spaceBetween)
   yield result
 end placeOne
 
 def updateStateAccordingResult[T](
-                                    placed: Placed[T], mainAxis : Axis,
-                                    spaceBetween : Int
+                                    placed: Placed[T],
+                                    mainAxis : Axis,
+                                    spaceBetween : Option[Int]
                                   ): State[RowColumnPlacementState, Unit] =
   State.modify:
-    state => state.copy(alreadyPlaced = (state.alreadyPlaced + placed.axisValue(mainAxis) + spaceBetween).refine)
+    state => state.copy(alreadyPlaced = (state.alreadyPlaced + placed.axisValue(mainAxis) + spaceBetween.getOrElse(0)).refine)
 end updateStateAccordingResult
 
-def placeMainAxis[T](
-                      sized: Sized[T],
-                      mainAxisStrategy: MainAxisStrategy,
-                      state: RowColumnPlacementState,
-                      bounds: AxisDependentBounds,
-                      allTheSize : Int
-                    ): Int =
+def placeMainAxis(
+                    mainAxisStrategy: MainAxisStrategy,
+                    state: RowColumnPlacementState,
+                    bounds: AxisDependentBounds,
+                    allTheSize : Int
+                  ): Int =
   def mainAxisMaxValue(bounds: AxisDependentBounds): ZNat =
     bounds.mainAxisMaxValue.getOrElse(
-      throw new IllegalStateException(s"Main axis size have infinite size and $mainAxisStrategy placement strategy.")
+      throw IllegalArgumentException(s"Main axis size have infinite size and $mainAxisStrategy placement strategy.")
     )
   end mainAxisMaxValue
   
@@ -80,7 +83,7 @@ end placeMainAxis
 def placeAdditionalAxis[T](sized : Sized[T], additionalAxisStrategy: AdditionalAxisStrategy, bounds: AxisDependentBounds) : Int =
   def additionalAxisMaxValue(bounds: AxisDependentBounds, strategy: AdditionalAxisStrategy) : ZNat =
     bounds.additionalAxisMaxValue.getOrElse(
-      throw new IllegalStateException(s"Additional axis size have infinite size and $strategy placement strategy.")
+      throw IllegalArgumentException(s"Additional axis size have infinite size and $strategy placement strategy.")
     )
   end additionalAxisMaxValue
 
