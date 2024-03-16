@@ -2,6 +2,7 @@ package me.katze.imagy.layout
 package rowcolumn
 
 import bound.AxisDependentBounds
+import bound.constraints.{ AdditionalAxisConstraint, MainAxisConstraint, StrategyBasedFiniteness }
 
 import cats.data.State
 import cats.syntax.all.{ *, given }
@@ -17,7 +18,7 @@ def rowColumnPlace[T](
                         elements : List[Sized[T]],
                         mainAxisStrategy: MainAxisStrategy,
                         additionalAxisStrategy: AdditionalAxisStrategy,
-                        bounds: AxisDependentBounds
+                        bounds: AxisDependentBounds :| (MainAxisConstraint[StrategyBasedFiniteness[mainAxisStrategy.type]] & AdditionalAxisConstraint[StrategyBasedFiniteness[additionalAxisStrategy.type]]),
                       ) : List[Placed[T]] =
   val allTheSum: ZNat = elements.map(_.mainAxisValue(bounds.axis)).sum.refine
   val size: ZNat = elements.size.refine
@@ -33,7 +34,7 @@ def placeOne[T](
                   element : Sized[T],
                   mainAxisStrategy: MainAxisStrategy,
                   additionalAxisStrategy: AdditionalAxisStrategy,
-                  bounds: AxisDependentBounds,
+                  bounds: AxisDependentBounds :| (MainAxisConstraint[StrategyBasedFiniteness[mainAxisStrategy.type]] & AdditionalAxisConstraint[StrategyBasedFiniteness[additionalAxisStrategy.type]]),
                   allTheSize : ZNat,
                   count : ZNat
                 ) : State[RowColumnPlacementState, Placed[T]] =
@@ -59,28 +60,29 @@ end updateStateAccordingResult
 def placeMainAxis(
                     mainAxisStrategy: MainAxisStrategy,
                     state: RowColumnPlacementState,
-                    bounds: AxisDependentBounds,
+                    bounds: AxisDependentBounds :| MainAxisConstraint[StrategyBasedFiniteness[mainAxisStrategy.type]],
                     allTheSize : Int
                   ): Int =
-  def mainAxisMaxValue(bounds: AxisDependentBounds): ZNat =
-    bounds.mainAxisMaxValue.getOrElse(
-      throw IllegalArgumentException(s"Main axis size have infinite size and $mainAxisStrategy placement strategy.")
-    )
-  end mainAxisMaxValue
   
   mainAxisStrategy match
     case Begin | SpaceBetween =>
       state.alreadyPlaced
     case Center =>
-      val start = (mainAxisMaxValue(bounds) - allTheSize) / 2
+      // Мы пропаттернматчили стратению и уверены, что StrategyBasedFiniteness[Center.type] - Finite.
+      val start = (MainAxisConstraint.mainAxisValue(bounds.assume) - allTheSize) / 2
       state.alreadyPlaced + start
     case End =>
-      val start = mainAxisMaxValue(bounds) - allTheSize
+      // Мы пропаттернматчили стратению и уверены, что StrategyBasedFiniteness[End.type] - Finite.
+      val start = MainAxisConstraint.mainAxisValue(bounds.assume) - allTheSize
       state.alreadyPlaced + start
   end match
 end placeMainAxis
 
-def placeAdditionalAxis[T](sized : Sized[T], additionalAxisStrategy: AdditionalAxisStrategy, bounds: AxisDependentBounds) : Int =
+def placeAdditionalAxis[T](
+                            sized : Sized[T],
+                            additionalAxisStrategy: AdditionalAxisStrategy, 
+                            bounds: AxisDependentBounds :| AdditionalAxisConstraint[StrategyBasedFiniteness[additionalAxisStrategy.type]]
+                          ) : Int =
   def additionalAxisMaxValue(bounds: AxisDependentBounds, strategy: AdditionalAxisStrategy) : ZNat =
     bounds.additionalAxisMaxValue.getOrElse(
       throw IllegalArgumentException(s"Additional axis size have infinite size and $strategy placement strategy.")

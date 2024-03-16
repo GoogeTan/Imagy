@@ -36,10 +36,34 @@ lazy val common = (project in file("./common"))
     libraryDependencies := defaultLibraries
   )
 
+lazy val test_ui = (project in file("./test_ui"))
+  .settings(
+    name := "test_ui",
+    idePackagePrefix := Some("me.katze.imagy.ui.test"),
+    libraryDependencies := defaultLibraries
+  ).dependsOn(common)
+
+lazy val example_application = (project in file("./example_application"))
+  .settings(
+    name := "example_application",
+    idePackagePrefix := Some("me.katze.imagy.example"),
+    libraryDependencies := defaultLibraries ++ effectLibaries ++ graphicLibraries,
+  ).dependsOn(test_ui, common, component, desktop, layout)
+
 def defaultLibraries = Seq(
   "org.typelevel" %% "cats-mtl" % "1.3.0",
   "io.github.iltotore" %% "iron" % "2.4.0",
   "org.typelevel" %% "cats-effect-testing-scalatest" % "1.4.0" % Test,
   "org.typelevel" %% "cats-effect" % "3.5.2" % Test,
   "org.scalatest" %% "scalatest" % "3.2.17" % Test
+)
+
+def effectLibaries  = Seq(
+  "org.typelevel" %% "cats-effect" % "3.5.2",
+)
+
+def lwjglVersion = "3.3.3"
+
+def graphicLibraries : Seq[ModuleID] = Seq(
+  "org.scala-lang.modules" %% "scala-swing" % "3.0.0"
 )

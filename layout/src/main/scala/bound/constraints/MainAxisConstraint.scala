@@ -2,27 +2,20 @@ package me.katze.imagy.layout
 package bound.constraints
 
 import bound.*
+import unit.MeasurementUnit
+import unit.constraints.Finite
 
 import io.github.iltotore.iron.{ *, given }
+import me.katze.imagy.common.ZNat
 
+import java.lang.IllegalStateException
 import scala.compiletime.summonInline
 
 final class MainAxisConstraint[C]
 
-inline given mainAxisConstraint[C, Impl <: Constraint[AxisBounds, C]](using Impl): Constraint[AxisDependentBounds, MainAxisConstraint[C]] with
-  override inline def test(value: AxisDependentBounds): Boolean =
-    summonInline[Impl].test(value.mainAxis)
-  end test
-  
-  override inline def message: String = s"Main axis must: ${summonInline[Impl].message}"
-end mainAxisConstraint
+object MainAxisConstraint:
+  def mainAxisValue(bounds : AxisDependentBounds :| MainAxisConstraint[Finite]) : ZNat =
+    bounds.mainAxisMaxValue.getOrElse(throw new IllegalStateException("Never happends. In case this happened create an issue."))
+  end mainAxisValue
+end MainAxisConstraint
 
-final class AdditionalAxisConstraint[C]
-
-inline given additionalAxisConstraint[C, Impl <: Constraint[AxisBounds, C]](using Impl): Constraint[AxisDependentBounds, AdditionalAxisConstraint[C]] with
-  override inline def test(value: AxisDependentBounds): Boolean =
-    summonInline[Impl].test(value.additionalAxis)
-  end test
-  
-  override inline def message: String = s"Main axis must: ${summonInline[Impl].message}"
-end additionalAxisConstraint
