@@ -1,16 +1,17 @@
 package me.katze.imagy.layout
 package rowcolumn
 
-import bound.constraints.{ AdditionalAxisConstraint, MainAxisConstraint, StrategyBasedFiniteness, given }
 import bound.{ AxisBounds, AxisDependentBounds }
+import bound.constraints.{ AdditionalAxisConstraint, MainAxisConstraint, StrategyBasedFiniteness, given }
 
 import io.github.iltotore.iron.constraint.all.{ *, given }
 import io.github.iltotore.iron.constraint.collection.{ *, given }
 import io.github.iltotore.iron.{ *, given }
-import constraint.Weighted
+import unit.constraints.Finite
 
 import me.katze.imagy.components.layout.MaybeWeighted
 import me.katze.imagy.components.layout.strategy.{ AdditionalAxisStrategy, Begin }
+import me.katze.imagy.layout.constraint.Weighted
 
 def column[T : Layout](
                         elements : List[MaybeWeighted[Measurable[T]]] :| Exists[Weighted],
