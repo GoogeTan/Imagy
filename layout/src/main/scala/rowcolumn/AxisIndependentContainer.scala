@@ -1,24 +1,30 @@
 package me.katze.imagy.layout
 package rowcolumn
 
-import bound.{ AxisBounds, AxisDependentBounds }
 import bound.constraints.{ AdditionalAxisConstraint, MainAxisConstraint, StrategyBasedFiniteness, given }
+import bound.{ AxisBounds, AxisDependentBounds }
 
 import io.github.iltotore.iron.constraint.all.{ *, given }
 import io.github.iltotore.iron.constraint.collection.{ *, given }
 import io.github.iltotore.iron.{ *, given }
-import unit.constraints.Finite
+import me.katze.imagy.layout.constraint.Weighted
 
 import me.katze.imagy.components.layout.MaybeWeighted
 import me.katze.imagy.components.layout.strategy.{ AdditionalAxisStrategy, Begin }
-import me.katze.imagy.layout.constraint.Weighted
 
-def column[T : Layout](
+def weightedColumn[T : Layout](
                         elements : List[MaybeWeighted[Measurable[T]]] :| Exists[Weighted],
                         horizontalStrategy : AdditionalAxisStrategy
                       ) : Measurable[T] =
   WeightedAxisBasedContainerMeasurable(Axis.Vertical, horizontalStrategy, elements)
-end column
+end weightedColumn
+
+def weightedRow[T: Layout](
+                    elements: List[MaybeWeighted[Measurable[T]]] :| Exists[Weighted],
+                    horizontalStrategy: AdditionalAxisStrategy
+                  ): Measurable[T] =
+  WeightedAxisBasedContainerMeasurable(Axis.Horizontal, horizontalStrategy, elements)
+end weightedRow
 
 def WeightedAxisBasedContainerMeasurable[T : Layout](
                                                       mainAxis: Axis,

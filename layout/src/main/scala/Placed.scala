@@ -5,10 +5,10 @@ import me.katze.imagy
 import me.katze.imagy.common.ZNat
 import me.katze.imagy.layout
 
-final case class Placed[+T](value : T, x : Int, y : Int, width : ZNat, height : ZNat):
-  def this(sized : Sized[T], x : Int, y : Int) = this(sized.value, x, y, sized.width, sized.height)
+final case class Placed[+T](value : T, x : ZNat, y : ZNat, width : ZNat, height : ZNat):
+  def this(sized : Sized[T], x : ZNat, y : ZNat) = this(sized.value, x, y, sized.width, sized.height)
   
-  def axisCoordinate(axis : Axis) : Int =
+  def axisCoordinate(axis : Axis) : ZNat =
     axis match
       case Axis.Vertical => y
       case Axis.Horizontal => x

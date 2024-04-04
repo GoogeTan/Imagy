@@ -6,6 +6,7 @@ import me.katze.imagy.components.layout.MaybeWeighted
 
 final class Weighted
 
+// TODO rename
 given nnn[T]: Constraint[MaybeWeighted[T], Weighted] with
   override inline def test(value: MaybeWeighted[T]): Boolean = value.weight.isDefined
   

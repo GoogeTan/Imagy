@@ -6,6 +6,8 @@ import bound.constraints.{ AdditionalAxisConstraint, MainAxisConstraint, Strateg
 
 import cats.data.State
 import cats.syntax.all.{ *, given }
+import io.github.iltotore.iron.constraint.all.GreaterEqual
+import io.github.iltotore.iron.constraint.numeric.Greater
 import io.github.iltotore.iron.{ *, given }
 import me.katze
 import me.katze.imagy
@@ -43,7 +45,7 @@ def placeOne[T](
     mainAxisCoordinate       = placeMainAxis(mainAxisStrategy, state, bounds, allTheSize)
     additionalAxisCoordinate = placeAdditionalAxis(element, additionalAxisStrategy, bounds)
     result                   = placed(element, mainAxisCoordinate, additionalAxisCoordinate, bounds.axis)
-    spaceBetween             = bounds.mainAxisMaxValue.map(_ - allTheSize).map(_ / count)
+    spaceBetween             = bounds.mainAxisMaxValue.map(_ - allTheSize).map(_ / count).flatMap(_.refineOption[GreaterEqual[0]])
     _                       <- updateStateAccordingResult(result, bounds.axis, spaceBetween)
   yield result
 end placeOne
@@ -51,7 +53,7 @@ end placeOne
 def updateStateAccordingResult[T](
                                     placed: Placed[T],
                                     mainAxis : Axis,
-                                    spaceBetween : Option[Int]
+                                    spaceBetween : Option[ZNat]
                                   ): State[RowColumnPlacementState, Unit] =
   State.modify:
     state => state.copy(alreadyPlaced = (state.alreadyPlaced + placed.axisValue(mainAxis) + spaceBetween.getOrElse(0)).refine)
@@ -61,8 +63,8 @@ def placeMainAxis(
                     mainAxisStrategy: MainAxisStrategy,
                     state: RowColumnPlacementState,
                     bounds: AxisDependentBounds :| MainAxisConstraint[StrategyBasedFiniteness[mainAxisStrategy.type]],
-                    allTheSize : Int
-                  ): Int =
+                    allTheSize : ZNat
+                  ): ZNat =
   
   mainAxisStrategy match
     case Begin | SpaceBetween =>
@@ -82,7 +84,7 @@ def placeAdditionalAxis[T](
                             sized : Sized[T],
                             additionalAxisStrategy: AdditionalAxisStrategy, 
                             bounds: AxisDependentBounds :| AdditionalAxisConstraint[StrategyBasedFiniteness[additionalAxisStrategy.type]]
-                          ) : Int =
+                          ) : ZNat =
   def additionalAxisMaxValue(bounds: AxisDependentBounds, strategy: AdditionalAxisStrategy) : ZNat =
     bounds.additionalAxisMaxValue.getOrElse(
       throw IllegalArgumentException(s"Additional axis size have infinite size and $strategy placement strategy.")
@@ -91,12 +93,12 @@ def placeAdditionalAxis[T](
 
   additionalAxisStrategy match
     case Begin  => 0
-    case Center => (additionalAxisMaxValue(bounds, additionalAxisStrategy) - sized.mainAxisValue(bounds.axis)) / 2
-    case End    =>  additionalAxisMaxValue(bounds, additionalAxisStrategy) - sized.mainAxisValue(bounds.axis)
+    case Center => ((additionalAxisMaxValue(bounds, additionalAxisStrategy) - sized.mainAxisValue(bounds.axis)) / 2).refine
+    case End    =>  (additionalAxisMaxValue(bounds, additionalAxisStrategy) - sized.mainAxisValue(bounds.axis)).refine
   end match
 end placeAdditionalAxis
 
-def placed[T](sized: Sized[T], mainAxisCoordinate : Int, additionalAxisCoordinate : Int, axis : Axis) : Placed[T] =
+def placed[T](sized: Sized[T], mainAxisCoordinate : ZNat, additionalAxisCoordinate : ZNat, axis : Axis) : Placed[T] =
   axis match
     case Axis.Vertical   => Placed(sized.value, additionalAxisCoordinate, mainAxisCoordinate, sized.width, sized.height)
     case Axis.Horizontal => Placed(sized.value, mainAxisCoordinate, additionalAxisCoordinate, sized.width, sized.height)

@@ -20,7 +20,7 @@ type DrawLoop[F[+_], -Widget] = F[Widget] => F[ExitCode]
 /**
  * Принимает изначальный виджет, способ послать его обновлённую версию и способ получить следующее событие для обновления(может приостановить поток).
  */
-type UpdateLoop[F[+_], Widget[_], DownEvent] = (Widget[DownEvent], Widget[DownEvent] => F[Unit], F[DownEvent | IOFinishedEvent]) => F[ExitCode]
+type UpdateLoop[F[+_], Widget[_], DownEvent] = (Widget[DownEvent], Widget[DownEvent] => F[Unit], F[DownEvent]) => F[ExitCode]
 
 /**
  * Каррированная версия MonadError.
@@ -41,7 +41,7 @@ def applicationLoop[F[+_] : Concurrent, DownEvent, Widget[-_]](
                                                               ): F[ApplicationControl[F, DownEvent]] =
 
   for
-    bus <- Queue.unbounded[F, DownEvent | IOFinishedEvent]
+    bus <- Queue.unbounded[F, DownEvent]
     widget <- AtomicCell[F].of(root)
     fork <- 
       Concurrent[F]
@@ -74,15 +74,13 @@ def drawLoop[
 end drawLoop
 
 def updateLoop[
-                F[+_] : Monad:  ProcessRequest,
-                Widget[-_],
+                F[+_] : ProcessRequest : Monad,
+                Widget[-A] <: EventConsumer[Widget[A], F, A, ApplicationRequest],
                 DownEvent
               ](
-                  using EventConsumer[Widget[DownEvent], F, DownEvent | IOFinishedEvent, ApplicationRequest]
-              )(
                 initial: Widget[DownEvent],
                 pushNew: Widget[DownEvent] => F[Unit],
-                nextEvent: F[DownEvent | IOFinishedEvent]
+                nextEvent: F[DownEvent]
               ) : F[ExitCode] =
   Monad[F].tailRecM(initial)(doUpdate(_, nextEvent, pushNew))
 end updateLoop
@@ -97,14 +95,12 @@ end updateLoop
  */
 def doUpdate[
               F[+_] : Monad : ProcessRequest,
-              Widget[-_],
+              Widget[-A] <: EventConsumer[Widget[A], F, A, ApplicationRequest],
               DownEvent
             ](
               widget: Widget[DownEvent],
-              nextEvent: F[DownEvent | IOFinishedEvent],
+              nextEvent: F[DownEvent],
               pushNew: Widget[DownEvent] => F[Unit],
-            )(
-              using EventConsumer[Widget[DownEvent], F, DownEvent | IOFinishedEvent, ApplicationRequest]
             ): F[Either[Widget[DownEvent], ExitCode]] =
   for
     event  <- nextEvent
