@@ -4,5 +4,5 @@ package place
 import me.katze.imagy.layout.bound.Bounds
 
 trait ApplicationBounds[+F[_]]:
-  def bounds : F[Bounds]
+  def currentBounds : F[Bounds]
 end ApplicationBounds

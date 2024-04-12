@@ -44,28 +44,28 @@ class RowColumnPlacementTest extends AnyFlatSpec with should.Matchers:
     rowColumnPlace(List(tenSized, tenSized, tenSized), Begin, Begin, infiniteBoundsHorizontal.refine) should be(List(
       Placed(TestWidget, 0, 0, tenSized.width, tenSized.height),
       Placed(TestWidget, tenSized.width, 0, tenSized.width, tenSized.height),
-      Placed(TestWidget, tenSized.width * 2, 0, tenSized.width, tenSized.height),
+      Placed(TestWidget, (tenSized.width * 2).refine, 0, tenSized.width, tenSized.height),
     ))
     
   "Row((10, 20), (10, 20), (10, 20))" should s"be (0, 0) (${tenSized.width}, 0) (${tenSized.width * 2}, 0) in $infiniteBoundsVertical" in :
     rowColumnPlace(List(tenSized, tenSized, tenSized), Begin, Begin, infiniteBoundsHorizontal.refine) should be(List(
       Placed(TestWidget, 0, 0, tenSized.width, tenSized.height),
       Placed(TestWidget, tenSized.width, 0, tenSized.width, tenSized.height),
-      Placed(TestWidget, tenSized.width * 2, 0, tenSized.width, tenSized.height),
+      Placed(TestWidget, (tenSized.width * 2).refine, 0, tenSized.width, tenSized.height),
     ))
     
   "Column((10, 20), (10, 20), (10, 20))" should s"be (0, 0) (0, ${tenSized.height} + 47) (0, ${tenSized.height * 2} + ${47*2}) in $finiteOverboundsVertical using ${SpaceBetween}" in :
     rowColumnPlace(List(tenSized, tenSized, tenSized), SpaceBetween, Begin, finiteOverboundsVertical.refine) should be(List(
       Placed(TestWidget, 0, 0, tenSized.width, tenSized.height),
-      Placed(TestWidget, 0, tenSized.height + 47, tenSized.width, tenSized.height),
-      Placed(TestWidget, 0, tenSized.height * 2 + 47*2, tenSized.width, tenSized.height),
+      Placed(TestWidget, 0, (tenSized.height + 47).refine, tenSized.width, tenSized.height),
+      Placed(TestWidget, 0, (tenSized.height * 2 + 47*2).refine, tenSized.width, tenSized.height),
     ))
   
   "Row((10, 20), (10, 20), (10, 20))" should s"be (0, 0) (${tenSized.width} + 24) (${tenSized.height * 2} + ${24*2}, 0) in $finiteOverboundsHorizontal using ${SpaceBetween}" in :
     rowColumnPlace(List(tenSized, tenSized, tenSized), SpaceBetween, Begin, finiteOverboundsHorizontal.refine) should be(List(
       Placed(TestWidget, 0, 0, tenSized.width, tenSized.height),
-      Placed(TestWidget, tenSized.width + 24, 0, tenSized.width, tenSized.height),
-      Placed(TestWidget, tenSized.width * 2 + 24 * 2, 0, tenSized.width, tenSized.height),
+      Placed(TestWidget, (tenSized.width + 24).refine, 0, tenSized.width, tenSized.height),
+      Placed(TestWidget, (tenSized.width * 2 + 24 * 2).refine, 0, tenSized.width, tenSized.height),
     ))
     
   "RowColumn in matching bounds" should "not depend on main axis strategy" in:

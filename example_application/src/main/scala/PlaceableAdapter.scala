@@ -33,8 +33,8 @@ final case class PlaceableAdapter[
   override def processEvent(event: DownEvent): F[EventProcessResult[PlaceableAdapter[F, G, DownEvent, UpEvent, FreeWidget, PlacedWidget], UpEvent]] =
     for
       result <- placed.value.processEvent(event)
-      bounds <- summon[ApplicationBounds[F]].bounds
-      newPlacedWidget = result.value.placeInside(bounds)
+      bounds <- summon[ApplicationBounds[F]].currentBounds
+      newPlacedWidget = result.freeWidget.placeInside(bounds)
     yield EventProcessResult(PlaceableAdapter(newPlacedWidget), result.events)
   end processEvent
 end PlaceableAdapter

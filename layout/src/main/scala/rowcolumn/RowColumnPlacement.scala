@@ -72,11 +72,11 @@ def placeMainAxis(
     case Center =>
       // Мы пропаттернматчили стратению и уверены, что StrategyBasedFiniteness[Center.type] - Finite.
       val start = (MainAxisConstraint.mainAxisValue(bounds.assume) - allTheSize) / 2
-      state.alreadyPlaced + start
+      (state.alreadyPlaced + start).refine // TODO подумать, как кинуть адекватную ошибку заранее, чтобы не вылететь тут
     case End =>
       // Мы пропаттернматчили стратению и уверены, что StrategyBasedFiniteness[End.type] - Finite.
       val start = MainAxisConstraint.mainAxisValue(bounds.assume) - allTheSize
-      state.alreadyPlaced + start
+      (state.alreadyPlaced + start).refine // TODO
   end match
 end placeMainAxis
 

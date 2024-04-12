@@ -10,6 +10,8 @@ import cats.syntax.all.{ *, given }
 import cats.{ Monad, MonadError }
 import me.katze.imagy
 import me.katze.imagy.example
+import me.katze.imagy.example.place.ApplicationBounds
+import me.katze.imagy.layout.bound.Bounds
 
 /**
  * Принимает способ получить нынешнее дерево виджетов и возвращает бесконечный цикл отрисовки. Завершается только в случае ошибки.
@@ -29,19 +31,25 @@ type MonadErrorT[T] = [F[_]] =>> MonadError[F, T]
 
 /**
  * Запускает в отдельных потоках обновление виджета и его отрисовку.
- * @param root дерево виджетов
+ * @param freeRoot дерево виджетов
  * @param drawLoop Цикл отрисовки приложения. Например, может рисовать на экран, рендерить в html и тому подобное.
  * @param updateLoop цикл обновления дерева виджетов приложения.
  * @tparam DownEvent Тип событий, которые умеет обрабатывать виджет.
  */
-def applicationLoop[F[+_] : Concurrent, DownEvent, Widget[-_]](
-                                                                root: Widget[DownEvent],
-                                                                drawLoop: DrawLoop[F, Widget[DownEvent]],
-                                                                updateLoop: UpdateLoop[F, Widget, DownEvent]
-                                                              ): F[ApplicationControl[F, DownEvent]] =
+def applicationLoop[
+  F[+_] : Concurrent, 
+  DownEvent, 
+  WidgetPlaced[_],
+  WidgetFree[T] <: Placeable[F, WidgetPlaced[T]]
+](
+    freeRoot: WidgetFree[DownEvent],
+    drawLoop: DrawLoop[F, WidgetPlaced[DownEvent]],
+    updateLoop: UpdateLoop[F, WidgetPlaced, DownEvent]
+): F[ApplicationControl[F, DownEvent]] =
 
   for
     bus <- Queue.unbounded[F, DownEvent]
+    root <- freeRoot.place()
     widget <- AtomicCell[F].of(root)
     fork <- 
       Concurrent[F]
@@ -73,42 +81,49 @@ def drawLoop[
     .map(_.get)
 end drawLoop
 
+trait Placeable[+F[+_], +T]:
+  def place() : F[T]
+
 def updateLoop[
                 F[+_] : ProcessRequest : Monad,
-                Widget[-A] <: EventConsumer[Widget[A], F, A, ApplicationRequest],
+                PlacedWidget[A] <: EventConsumer[FreeWidget[A], F, A, ApplicationRequest],
+                FreeWidget[A] <: Placeable[F, PlacedWidget[A]],
                 DownEvent
               ](
-                initial: Widget[DownEvent],
-                pushNew: Widget[DownEvent] => F[Unit],
-                nextEvent: F[DownEvent]
+                initial: PlacedWidget[DownEvent],
+                pushNew: PlacedWidget[DownEvent] => F[Unit],
+                nextEvent: F[DownEvent],
               ) : F[ExitCode] =
-  Monad[F].tailRecM(initial)(doUpdate(_, nextEvent, pushNew))
+  Monad[F].tailRecM(initial)(updateStep(_, nextEvent, pushNew))
 end updateLoop
 
 /**
  * TODO Написать норм описание, что тут происходит. А лучше поработать над неймингом, чтобы вопросов не возникало
  * @param widget Виджет, который принимает внешние события
- * @param nextEvent Достаёт следующее событие из очереди или иного источника
+ * @param waitForTheNextEvent Достаёт следующее событие из очереди или иного источника
  * @param pushNew Отправляет обновлённый виджет
  * @tparam DownEvent Тип внешнего события виджета
  * @return
  */
-def doUpdate[
+def updateStep[
               F[+_] : Monad : ProcessRequest,
-              Widget[-A] <: EventConsumer[Widget[A], F, A, ApplicationRequest],
+              PlacedWidget[A] <: EventConsumer[FreeWidget[A], F, A, ApplicationRequest],
+              FreeWidget[A] <: Placeable[F, PlacedWidget[A]],
               DownEvent
             ](
-              widget: Widget[DownEvent],
-              nextEvent: F[DownEvent],
-              pushNew: Widget[DownEvent] => F[Unit],
-            ): F[Either[Widget[DownEvent], ExitCode]] =
+                widget: PlacedWidget[DownEvent],
+                waitForTheNextEvent: F[DownEvent],
+                pushNew: PlacedWidget[DownEvent] => F[Unit]
+            ): F[Either[PlacedWidget[DownEvent], ExitCode]] =
   for
-    event  <- nextEvent
-    result <- widget.processEvent(event)
-    _      <- pushNew(result.value)
-    exit   <- processRequests(result.events)
-  yield exit.toRight(result.value)
-end doUpdate
+    event  <- waitForTheNextEvent
+    processResult <- widget.processEvent(event)
+    EventProcessResult(freeWidget, events) = processResult
+    placedWidget <- freeWidget.place()
+    _      <- pushNew(placedWidget)
+    exit   <- processRequests(events)
+  yield exit.toRight(placedWidget)
+end updateStep
 
 def processRequests[F[_] : Monad : ProcessRequest](requests : List[ApplicationRequest]) : F[Option[ExitCode]] =
   requests.collectFirstSomeM(_.process)
